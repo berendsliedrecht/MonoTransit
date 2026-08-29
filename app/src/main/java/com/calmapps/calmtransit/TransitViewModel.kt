@@ -131,7 +131,13 @@ class TransitViewModel(application: Application) : AndroidViewModel(application)
                     arriveBy = if (arriveBy) true else null,
                 )
             }
-                .onSuccess { trips = it.itineraries }
+                .onSuccess { response ->
+                    // Arrive-by results come back chronologically; put the itinerary
+                    // arriving closest to the requested time on top
+                    trips =
+                        if (arriveBy) response.itineraries.sortedByDescending { it.endTime.orEmpty() }
+                        else response.itineraries
+                }
                 .onFailure {
                     planError = it.message ?: "Trip planning failed"
                     trips = emptyList()
