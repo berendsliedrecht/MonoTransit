@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.calmapps.calmtransit"
+    namespace = "com.berend.transit"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.calmapps.calmtransit"
+        applicationId = "com.berend.transit"
         minSdk = 28
         targetSdk = 35
         versionCode = 1

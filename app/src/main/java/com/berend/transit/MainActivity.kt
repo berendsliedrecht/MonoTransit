@@ -1,4 +1,4 @@
-package com.calmapps.calmtransit
+package com.berend.transit
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.calmapps.calmtransit.ui.PlannerScreen
+import com.berend.transit.ui.PlannerScreen
 import com.mudita.mmd.ThemeMMD
 
 class MainActivity : ComponentActivity() {

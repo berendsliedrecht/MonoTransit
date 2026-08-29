@@ -1,4 +1,4 @@
-package com.calmapps.calmtransit.ui
+package com.berend.transit.ui
 
 import android.content.Intent
 import android.net.Uri
@@ -31,11 +31,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.calmapps.calmtransit.TransitViewModel
-import com.calmapps.calmtransit.api.GeoMatch
-import com.calmapps.calmtransit.api.Itinerary
-import com.calmapps.calmtransit.api.asClock
-import com.calmapps.calmtransit.api.toPlanTime
+import com.berend.transit.TransitViewModel
+import com.berend.transit.api.GeoMatch
+import com.berend.transit.api.Itinerary
+import com.berend.transit.api.asClock
+import com.berend.transit.api.toPlanTime
 import com.mudita.mmd.components.buttons.ButtonMMD
 import com.mudita.mmd.components.buttons.OutlinedButtonMMD
 import com.mudita.mmd.components.divider.HorizontalDividerMMD

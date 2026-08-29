@@ -1,4 +1,4 @@
-package com.calmapps.calmtransit.api
+package com.berend.transit.api
 
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit

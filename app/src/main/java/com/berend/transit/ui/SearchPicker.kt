@@ -1,4 +1,4 @@
-package com.calmapps.calmtransit.ui
+package com.berend.transit.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi

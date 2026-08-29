@@ -1,4 +1,4 @@
-package com.calmapps.calmtransit
+package com.berend.transit
 
 import android.app.Application
 import android.content.Context
@@ -7,9 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.calmapps.calmtransit.api.GeoMatch
-import com.calmapps.calmtransit.api.Itinerary
-import com.calmapps.calmtransit.api.createTransitousApi
+import com.berend.transit.api.GeoMatch
+import com.berend.transit.api.Itinerary
+import com.berend.transit.api.createTransitousApi
 import com.google.gson.Gson
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

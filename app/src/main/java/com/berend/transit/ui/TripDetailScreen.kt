@@ -1,4 +1,4 @@
-package com.calmapps.calmtransit.ui
+package com.berend.transit.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
@@ -22,11 +22,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.calmapps.calmtransit.api.Itinerary
-import com.calmapps.calmtransit.api.PlanLeg
-import com.calmapps.calmtransit.api.PlanStop
-import com.calmapps.calmtransit.api.asClock
-import com.calmapps.calmtransit.api.toPlanTime
+import com.berend.transit.api.Itinerary
+import com.berend.transit.api.PlanLeg
+import com.berend.transit.api.PlanStop
+import com.berend.transit.api.asClock
+import com.berend.transit.api.toPlanTime
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
 import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.mudita.mmd.components.text.TextMMD
