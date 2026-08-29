@@ -1,0 +1,4 @@
+<resources>
+    <!-- MMD provides the composable theme; this is a minimal placeholder. -->
+    <style name="Theme.CalmTransit" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
