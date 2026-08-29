@@ -139,11 +139,11 @@ private fun PlannerContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButtonMMD(onClick = viewModel::toggleArriveBy) {
+                TextMMD(if (viewModel.arriveBy) "Arrive" else "Leave", fontSize = 16.sp)
+            }
             OutlinedButtonMMD(onClick = viewModel::resetDeparture, modifier = Modifier.weight(1f)) {
-                TextMMD(
-                    text = viewModel.departAt?.let { "Leave ${it.asClock()}" } ?: "Leave now",
-                    fontSize = 16.sp,
-                )
+                TextMMD(viewModel.departAt?.asClock() ?: "now", fontSize = 16.sp)
             }
             OutlinedButtonMMD(onClick = { viewModel.adjustDeparture(-15) }) {
                 TextMMD("-15", fontSize = 16.sp)

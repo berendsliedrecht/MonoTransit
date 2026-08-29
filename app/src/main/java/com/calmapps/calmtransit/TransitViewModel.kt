@@ -28,6 +28,7 @@ class TransitViewModel(application: Application) : AndroidViewModel(application)
     var fromPlace by mutableStateOf<GeoMatch?>(null)
     var toPlace by mutableStateOf<GeoMatch?>(null)
     var departAt by mutableStateOf<OffsetDateTime?>(null); private set // null = leave now
+    var arriveBy by mutableStateOf(false); private set
     var trips by mutableStateOf<List<Itinerary>>(emptyList()); private set
     var isPlanning by mutableStateOf(false); private set
     var planError by mutableStateOf<String?>(null); private set
@@ -78,15 +79,24 @@ class TransitViewModel(application: Application) : AndroidViewModel(application)
         toPlace = from
     }
 
-    /** Shift the departure time; drifting to before now resets to "leave now". */
+    /** Shift the planning time; drifting to before now resets to "leave now". */
     fun adjustDeparture(minutes: Long) {
         val now = OffsetDateTime.now(AMSTERDAM)
         val next = (departAt ?: now).plusMinutes(minutes)
-        departAt = if (next.isBefore(now)) null else next
+        if (next.isBefore(now)) resetDeparture() else departAt = next
+    }
+
+    /** Toggle between "leave at" and "arrive by"; arrive-by needs a concrete time to aim for. */
+    fun toggleArriveBy() {
+        arriveBy = !arriveBy
+        if (arriveBy && departAt == null) {
+            departAt = OffsetDateTime.now(AMSTERDAM).plusHours(1)
+        }
     }
 
     fun resetDeparture() {
         departAt = null
+        arriveBy = false
     }
 
     fun searchPlaces(query: String) {
@@ -114,7 +124,12 @@ class TransitViewModel(application: Application) : AndroidViewModel(application)
             isPlanning = true
             planError = null
             runCatching {
-                transitous.plan(from, to, time = departAt?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+                transitous.plan(
+                    from,
+                    to,
+                    time = departAt?.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                    arriveBy = if (arriveBy) true else null,
+                )
             }
                 .onSuccess { trips = it.itineraries }
                 .onFailure {

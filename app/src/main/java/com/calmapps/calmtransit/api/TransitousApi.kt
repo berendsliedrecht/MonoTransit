@@ -25,6 +25,7 @@ interface TransitousApi {
         @Query("toPlace") toPlace: String,
         @Query("numItineraries") numItineraries: Int = 5,
         @Query("time") time: String? = null,
+        @Query("arriveBy") arriveBy: Boolean? = null,
     ): PlanResponse
 }
 
