@@ -18,8 +18,6 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-private val AMSTERDAM: ZoneId = ZoneId.of("Europe/Amsterdam")
-
 class TransitViewModel(application: Application) : AndroidViewModel(application) {
 
     private val transitous by lazy { createTransitousApi() }
@@ -81,7 +79,7 @@ class TransitViewModel(application: Application) : AndroidViewModel(application)
 
     /** Shift the planning time; drifting to before now resets to "leave now". */
     fun adjustDeparture(minutes: Long) {
-        val now = OffsetDateTime.now(AMSTERDAM)
+        val now = OffsetDateTime.now(ZoneId.systemDefault())
         val next = (departAt ?: now).plusMinutes(minutes)
         if (next.isBefore(now)) resetDeparture() else departAt = next
     }
@@ -90,7 +88,7 @@ class TransitViewModel(application: Application) : AndroidViewModel(application)
     fun toggleArriveBy() {
         arriveBy = !arriveBy
         if (arriveBy && departAt == null) {
-            departAt = OffsetDateTime.now(AMSTERDAM).plusHours(1)
+            departAt = OffsetDateTime.now(ZoneId.systemDefault()).plusHours(1)
         }
     }
 

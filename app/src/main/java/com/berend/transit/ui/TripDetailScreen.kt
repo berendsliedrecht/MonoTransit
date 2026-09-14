@@ -103,7 +103,7 @@ private fun TransitLegDetail(leg: PlanLeg) {
         val headsign = leg.headsign?.takeIf { it.isNotBlank() }?.let { " to $it" }.orEmpty()
         TextMMD("${leg.label}$headsign", fontSize = 17.sp, fontWeight = FontWeight.Bold)
         StopDetail(leg.startTime, leg.scheduledStartTime, leg.from)
-        StopDetail(leg.endTime, null, leg.to)
+        StopDetail(leg.endTime, leg.scheduledEndTime, leg.to)
     }
 }
 

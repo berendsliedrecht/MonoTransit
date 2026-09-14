@@ -39,7 +39,7 @@ fun createTransitousApi(): TransitousApi = Retrofit.Builder()
                         // Transitous policy: identify app, version and a contact method
                         .header(
                             "User-Agent",
-                            "Transit/0.1.0 (https://github.com/berendsliedrecht/eink-transport; berendcsliedrecht@gmail.com)",
+                            "Transit/0.1.1 (https://github.com/berendsliedrecht/eink-transport; berendcsliedrecht@gmail.com)",
                         )
                         .build(),
                 )
@@ -83,6 +83,7 @@ data class PlanLeg(
     val startTime: String? = null,
     val endTime: String? = null,
     val scheduledStartTime: String? = null,
+    val scheduledEndTime: String? = null,
     val duration: Long = 0, // seconds
     val from: PlanStop? = null,
     val to: PlanStop? = null,
@@ -106,12 +107,11 @@ data class PlanStop(
     val cancelled: Boolean = false,
 )
 
-private val AMSTERDAM_ZONE: ZoneId = ZoneId.of("Europe/Amsterdam")
 private val CLOCK: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-/** Transitous UTC timestamp as local Dutch time. */
+/** Transitous UTC timestamp in the device's local time. */
 fun String?.toPlanTime(): OffsetDateTime? = this?.let {
-    runCatching { OffsetDateTime.parse(it).atZoneSameInstant(AMSTERDAM_ZONE).toOffsetDateTime() }.getOrNull()
+    runCatching { OffsetDateTime.parse(it).atZoneSameInstant(ZoneId.systemDefault()).toOffsetDateTime() }.getOrNull()
 }
 
 fun OffsetDateTime?.asClock(): String = this?.format(CLOCK) ?: "--:--"
