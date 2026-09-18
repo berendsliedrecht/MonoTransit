@@ -37,6 +37,10 @@ This app follows the [Transitous API guidelines](https://transitous.org/api/):
 - Routing and geocoding: [Transitous](https://transitous.org), aggregating the transit feeds listed at [transitous.org/sources](https://transitous.org/sources/) (also linked in the app footer). All data remains subject to the licenses of those sources.
 - Map and address data: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, licensed under the [ODbL](https://opendatacommons.org/licenses/odbl/).
 
+## Support
+
+If you find this app useful, consider [sponsoring me](https://github.com/sponsors/berendsliedrecht).
+
 ## License
 
 [MIT](LICENSE)
