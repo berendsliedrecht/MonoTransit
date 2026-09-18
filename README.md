@@ -1,4 +1,4 @@
-# Transit
+# MonoTransit
 
 Door-to-door public transit planner for the Mudita Kompakt (e-ink), built with the Mudita Mindful Design (MMD) framework. Search stops or addresses, plan by departure or arrival time, and open a trip for a calm leg-by-leg overview with platform info. No API key or account required.
 

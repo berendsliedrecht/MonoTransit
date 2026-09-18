@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "eink-transport"
+rootProject.name = "MonoTransit"
 include(":app")
