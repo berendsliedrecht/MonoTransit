@@ -235,13 +235,14 @@ private fun ItineraryRow(itinerary: Itinerary, onClick: () -> Unit) {
     }
 }
 
-// One mode icon per leg; very long trips fall back to a transfer count.
+// Icon plus line name while they fit (up to 2 legs), icons only up to 4,
+// then a transfer count.
 @Composable
 private fun LegSummary(itinerary: Itinerary, modifier: Modifier = Modifier) {
     val legs = itinerary.legs.filter { it.isTransit }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.Start,
         modifier = modifier,
     ) {
         if (legs.size <= 4) {
@@ -252,6 +253,20 @@ private fun LegSummary(itinerary: Itinerary, modifier: Modifier = Modifier) {
                     contentDescription = leg.label,
                     modifier = Modifier.size(20.dp),
                 )
+                // Trains: the departure track is more useful at a glance than
+                // the train's own ID ("EST 9381").
+                val name = when (leg.mode) {
+                    "BUS", "TRAM", "SUBWAY", "FERRY" -> leg.routeShortName
+                    else -> leg.from?.track?.let { "Track $it" } ?: leg.routeShortName
+                }
+                if (legs.size <= 2 && !name.isNullOrBlank()) {
+                    TextMMD(
+                        text = name,
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 2.dp),
+                    )
+                }
             }
         } else {
             TextMMD("${itinerary.transfers} transfers", fontSize = 14.sp, maxLines = 1)
