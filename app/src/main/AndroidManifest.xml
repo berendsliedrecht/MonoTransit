@@ -10,10 +10,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MonoTransit">
 
+        <!-- adjustPan: resizing lets the keyboard squeeze LazyColumnMMD to a
+             height its scrollbar cannot draw, crashing inside MMD -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustPan">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -77,11 +77,9 @@ class TransitViewModel(application: Application) : AndroidViewModel(application)
         toPlace = from
     }
 
-    /** Shift the planning time; drifting to before now resets to "leave now". */
-    fun adjustDeparture(minutes: Long) {
-        val now = OffsetDateTime.now(ZoneId.systemDefault())
-        val next = (departAt ?: now).plusMinutes(minutes)
-        if (next.isBefore(now)) resetDeparture() else departAt = next
+    /** Set an explicit planning time; null returns to "leave now". */
+    fun setDeparture(time: OffsetDateTime?) {
+        if (time == null) resetDeparture() else departAt = time
     }
 
     /** Toggle between "leave at" and "arrive by"; arrive-by needs a concrete time to aim for. */

@@ -2,12 +2,14 @@ package com.berend.transit.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -20,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.berend.transit.api.Itinerary
@@ -33,12 +36,43 @@ import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 import java.time.Duration
 
+// One fixed-height list item per text row. LazyColumnMMD ignores scroll
+// gestures and hides its scrollbar unless item count times the FIRST visible
+// item's height exceeds the viewport, so variable item heights make it
+// under-estimate the content and swallow swipes on longer trips.
+private val ROW_HEIGHT = 52.dp
+
+internal sealed interface LegRow
+internal data class HeaderRow(val leg: PlanLeg) : LegRow
+internal data class StopRow(
+    val time: String?,
+    val scheduledTime: String?,
+    val stop: PlanStop?,
+    val dividerAfter: Boolean,
+) : LegRow
+internal data class WalkRow(val minutes: Long) : LegRow
+
+internal fun legRows(itinerary: Itinerary): List<LegRow> {
+    val lastTransit = itinerary.legs.lastOrNull { it.isTransit }
+    return buildList {
+        for (leg in itinerary.legs) {
+            if (leg.isTransit) {
+                add(HeaderRow(leg))
+                add(StopRow(leg.startTime, leg.scheduledStartTime, leg.from, dividerAfter = false))
+                add(StopRow(leg.endTime, leg.scheduledEndTime, leg.to, dividerAfter = leg !== lastTransit))
+            } else if (leg.duration >= 60) {
+                add(WalkRow(leg.duration / 60))
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TripDetailScreen(itinerary: Itinerary, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
 
-    val transitLegs = itinerary.legs.filter { it.isTransit }
+    val rows = legRows(itinerary)
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBarMMD(
@@ -67,19 +101,28 @@ fun TripDetailScreen(itinerary: Itinerary, onBack: () -> Unit) {
                     1 -> "1 transfer"
                     else -> "${itinerary.transfers} transfers"
                 }
-                TextMMD(
-                    text = "${minutes / 60} h ${minutes % 60} min, $transfers",
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(bottom = 4.dp),
-                )
+                DetailRow {
+                    TextMMD("${minutes / 60} h ${minutes % 60} min, $transfers", fontSize = 14.sp)
+                }
             }
-            items(itinerary.legs.size) { index ->
-                val leg = itinerary.legs[index]
-                if (leg.isTransit) {
-                    TransitLegDetail(leg)
-                    if (leg != transitLegs.last()) HorizontalDividerMMD()
-                } else {
-                    WalkDetail(leg)
+            items(rows.size) { index ->
+                when (val row = rows[index]) {
+                    is HeaderRow -> DetailRow {
+                        val headsign = row.leg.headsign?.takeIf { it.isNotBlank() }?.let { " to $it" }.orEmpty()
+                        TextMMD(
+                            text = "${row.leg.label}$headsign",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    is StopRow -> DetailRow(dividerAfter = row.dividerAfter) {
+                        StopDetail(row.time, row.scheduledTime, row.stop)
+                    }
+                    is WalkRow -> DetailRow {
+                        TextMMD("Walk ${row.minutes} min", fontSize = 14.sp)
+                    }
                 }
             }
         }
@@ -87,23 +130,15 @@ fun TripDetailScreen(itinerary: Itinerary, onBack: () -> Unit) {
 }
 
 @Composable
-private fun WalkDetail(leg: PlanLeg) {
-    val minutes = leg.duration / 60
-    if (minutes < 1) return
-    TextMMD(
-        text = "Walk $minutes min",
-        fontSize = 14.sp,
-        modifier = Modifier.padding(vertical = 8.dp),
-    )
-}
-
-@Composable
-private fun TransitLegDetail(leg: PlanLeg) {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-        val headsign = leg.headsign?.takeIf { it.isNotBlank() }?.let { " to $it" }.orEmpty()
-        TextMMD("${leg.label}$headsign", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-        StopDetail(leg.startTime, leg.scheduledStartTime, leg.from)
-        StopDetail(leg.endTime, leg.scheduledEndTime, leg.to)
+private fun DetailRow(dividerAfter: Boolean = false, content: @Composable () -> Unit) {
+    Box(
+        contentAlignment = Alignment.CenterStart,
+        modifier = Modifier.fillMaxWidth().height(ROW_HEIGHT),
+    ) {
+        content()
+        if (dividerAfter) {
+            Box(modifier = Modifier.align(Alignment.BottomCenter)) { HorizontalDividerMMD() }
+        }
     }
 }
 
@@ -115,7 +150,7 @@ private fun StopDetail(time: String?, scheduledTime: String?, stop: PlanStop?) {
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         TextMMD(actual.asClock(), fontSize = 22.sp, fontWeight = FontWeight.Bold)
         if (delay > 0) {
@@ -124,7 +159,7 @@ private fun StopDetail(time: String?, scheduledTime: String?, stop: PlanStop?) {
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            TextMMD(stop?.name.orEmpty(), fontSize = 16.sp)
+            TextMMD(stop?.name.orEmpty(), fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (stop?.cancelled == true) {
                 TextMMD("Cancelled", fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }

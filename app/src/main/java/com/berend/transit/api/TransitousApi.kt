@@ -5,9 +5,11 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * Transitous (https://transitous.org): free community-run MOTIS routing over aggregated GTFS.
@@ -115,3 +117,17 @@ fun String?.toPlanTime(): OffsetDateTime? = this?.let {
 }
 
 fun OffsetDateTime?.asClock(): String = this?.format(CLOCK) ?: "--:--"
+
+// English like the rest of the UI, regardless of device locale
+private val DAY: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH)
+
+/** "Today", "Tomorrow" or "EEE d MMM". */
+fun LocalDate.asDayLabel(today: LocalDate = LocalDate.now()): String = when (this) {
+    today -> "Today"
+    today.plusDays(1) -> "Tomorrow"
+    else -> format(DAY)
+}
+
+/** Clock time for today, day label plus clock otherwise. */
+fun OffsetDateTime.asPlanLabel(today: LocalDate = LocalDate.now()): String =
+    if (toLocalDate() == today) asClock() else "${toLocalDate().asDayLabel(today)} ${asClock()}"
