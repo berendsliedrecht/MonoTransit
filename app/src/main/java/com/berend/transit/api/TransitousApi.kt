@@ -41,7 +41,7 @@ fun createTransitousApi(): TransitousApi = Retrofit.Builder()
                         // Transitous policy: identify app, version and a contact method
                         .header(
                             "User-Agent",
-                            "MonoTransit/0.1.4 (https://github.com/berendsliedrecht/MonoTransit; berendcsliedrecht@gmail.com)",
+                            "MonoTransit/0.1.5 (https://github.com/berendsliedrecht/MonoTransit; berendcsliedrecht@gmail.com)",
                         )
                         .build(),
                 )
