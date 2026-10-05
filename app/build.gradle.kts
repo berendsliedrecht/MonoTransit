@@ -11,8 +11,8 @@ android {
         applicationId = "com.berend.transit"
         minSdk = 28
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.1.6"
+        versionCode = 8
+        versionName = "0.1.7"
     }
 
     buildTypes {
@@ -32,6 +32,10 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+    // Compress native libs: AGP 8.2 does not 16 KB-align uncompressed .so
+    // files, which makes newer Android builds show a compatibility dialog
+    // on debuggable apps. Compressed libs are exempt from the check.
+    packaging { jniLibs { useLegacyPackaging = true } }
 
     buildFeatures {
         compose = true
