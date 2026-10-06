@@ -1,5 +1,6 @@
 package com.berend.transit.api
 
+import com.berend.transit.BuildConfig
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -41,7 +42,7 @@ fun createTransitousApi(): TransitousApi = Retrofit.Builder()
                         // Transitous policy: identify app, version and a contact method
                         .header(
                             "User-Agent",
-                            "MonoTransit/0.1.6 (https://github.com/berendsliedrecht/MonoTransit; berendcsliedrecht@gmail.com)",
+                            "MonoTransit/${BuildConfig.VERSION_NAME} (https://github.com/berendsliedrecht/MonoTransit; berendcsliedrecht@gmail.com)",
                         )
                         .build(),
                 )

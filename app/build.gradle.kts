@@ -39,6 +39,8 @@ android {
 
     buildFeatures {
         compose = true
+        // BuildConfig.VERSION_NAME feeds the Transitous User-Agent
+        buildConfig = true
     }
 
     composeOptions {
