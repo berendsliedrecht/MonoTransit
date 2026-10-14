@@ -3,6 +3,12 @@ package com.berend.transit.ui
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Paint
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.GnssStatus
 import android.location.Location
 import android.location.LocationListener
@@ -60,6 +66,7 @@ import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapLibreMapOptions
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
@@ -67,13 +74,21 @@ import org.maplibre.android.style.layers.PropertyFactory.circleColor
 import org.maplibre.android.style.layers.PropertyFactory.circleRadius
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
+import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
+import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
+import org.maplibre.android.style.layers.PropertyFactory.iconImage
+import org.maplibre.android.style.layers.PropertyFactory.iconRotate
+import org.maplibre.android.style.layers.PropertyFactory.iconRotationAlignment
 import org.maplibre.android.style.layers.PropertyFactory.lineCap
 import org.maplibre.android.style.layers.PropertyFactory.lineColor
 import org.maplibre.android.style.layers.PropertyFactory.lineJoin
 import org.maplibre.android.style.layers.PropertyFactory.lineWidth
+import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,7 +138,7 @@ fun WalkScreen(leg: PlanLeg, onBack: () -> Unit) {
     }
 }
 
-internal data class GpsState(val location: LatLon?, val satellites: Int)
+internal data class GpsState(val location: LatLon?, val satellites: Int, val bearing: Float?)
 
 /** Current GPS fix (null until granted and found) plus visible satellite count. */
 @Composable
@@ -131,6 +146,7 @@ private fun rememberGpsLocation(): GpsState {
     val context = LocalContext.current
     var location by remember { mutableStateOf<LatLon?>(null) }
     var satellites by remember { mutableStateOf(0) }
+    var bearing by remember { mutableStateOf<Float?>(null) }
     var granted by remember {
         mutableStateOf(
             context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED,
@@ -147,6 +163,8 @@ private fun rememberGpsLocation(): GpsState {
         val listener = object : LocationListener {
             override fun onLocationChanged(fix: Location) {
                 location = LatLon(fix.latitude, fix.longitude)
+                // Course over ground; only meaningful while actually moving
+                if (fix.hasBearing() && fix.speed > 0.5f) bearing = fix.bearing
             }
 
             @Deprecated("Deprecated in Java")
@@ -180,7 +198,38 @@ private fun rememberGpsLocation(): GpsState {
             manager.unregisterGnssStatusCallback(gnssCallback)
         }
     }
-    return GpsState(location, satellites)
+    // A compass needs no movement, so it wins over the GPS course
+    return GpsState(location, satellites, rememberCompassBearing() ?: bearing)
+}
+
+/** Compass azimuth in degrees from north, or null without the sensor. */
+@Composable
+private fun rememberCompassBearing(): Float? {
+    val context = LocalContext.current
+    var azimuth by remember { mutableStateOf<Float?>(null) }
+    DisposableEffect(Unit) {
+        val manager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val sensor = manager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        val listener = object : SensorEventListener {
+            private val rotation = FloatArray(9)
+            private val orientation = FloatArray(3)
+            override fun onSensorChanged(event: SensorEvent) {
+                SensorManager.getRotationMatrixFromVector(rotation, event.values)
+                SensorManager.getOrientation(rotation, orientation)
+                val degrees = ((Math.toDegrees(orientation[0].toDouble()) + 360) % 360).toFloat()
+                val current = azimuth
+                // E-ink: redraw the arrow only on real direction changes
+                if (current == null || abs(((degrees - current + 540) % 360) - 180) >= 10f) {
+                    azimuth = degrees
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+        }
+        if (sensor != null) manager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+        onDispose { manager.unregisterListener(listener) }
+    }
+    return azimuth
 }
 
 // Monochrome vector map (assets/map_style.json over OpenFreeMap tiles) with
@@ -222,6 +271,9 @@ private fun WalkMap(points: List<LatLon>, gps: GpsState, modifier: Modifier = Mo
             map = ready
             ready.uiSettings.isLogoEnabled = false
             ready.setStyle(Style.Builder().fromUri("asset://map_style.json")) { loaded ->
+                val density = context.resources.displayMetrics.density
+                loaded.addImage("pos-dot", positionDotBitmap(density))
+                loaded.addImage("pos-arrow", positionArrowBitmap(density))
                 if (points.size >= 2) {
                     val route = LineString.fromLngLats(points.map { Point.fromLngLat(it.lon, it.lat) })
                     loaded.addSource(GeoJsonSource("route", route))
@@ -243,6 +295,31 @@ private fun WalkMap(points: List<LatLon>, gps: GpsState, modifier: Modifier = Mo
                             lineJoin(Property.LINE_JOIN_ROUND),
                         ),
                     )
+                    // Start: hollow ring. Destination: bullseye.
+                    val first = points.first()
+                    val last = points.last()
+                    loaded.addSource(GeoJsonSource("walk-start", Point.fromLngLat(first.lon, first.lat)))
+                    loaded.addLayer(
+                        CircleLayer("walk-start-ring", "walk-start").withProperties(
+                            circleRadius(7f),
+                            circleColor("#ffffff"),
+                            circleStrokeColor("#000000"),
+                            circleStrokeWidth(3f),
+                        ),
+                    )
+                    loaded.addSource(GeoJsonSource("walk-end", Point.fromLngLat(last.lon, last.lat)))
+                    loaded.addLayer(
+                        CircleLayer("walk-end-outer", "walk-end").withProperties(
+                            circleRadius(10f),
+                            circleColor("#000000"),
+                        ),
+                    )
+                    loaded.addLayer(
+                        CircleLayer("walk-end-inner", "walk-end").withProperties(
+                            circleRadius(4f),
+                            circleColor("#ffffff"),
+                        ),
+                    )
                     val bounds = LatLngBounds.Builder()
                         .apply { points.forEach { include(LatLng(it.lat, it.lon)) } }
                         .build()
@@ -250,11 +327,14 @@ private fun WalkMap(points: List<LatLon>, gps: GpsState, modifier: Modifier = Mo
                 }
                 loaded.addSource(GeoJsonSource("position"))
                 loaded.addLayer(
-                    CircleLayer("position-dot", "position").withProperties(
-                        circleRadius(6f),
-                        circleColor("#ffffff"),
-                        circleStrokeColor("#000000"),
-                        circleStrokeWidth(3f),
+                    SymbolLayer("position-marker", "position").withProperties(
+                        iconImage(Expression.get("icon")),
+                        iconRotate(Expression.get("bearing")),
+                        // Map-aligned so the arrow points the real-world way
+                        // even when the user rotates the map
+                        iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
+                        iconAllowOverlap(true),
+                        iconIgnorePlacement(true),
                     ),
                 )
                 style = loaded
@@ -263,9 +343,13 @@ private fun WalkMap(points: List<LatLon>, gps: GpsState, modifier: Modifier = Mo
         }
     }
 
-    LaunchedEffect(style, location) {
+    LaunchedEffect(style, location, gps.bearing) {
         val fix = location ?: return@LaunchedEffect
-        style?.getSourceAs<GeoJsonSource>("position")?.setGeoJson(Point.fromLngLat(fix.lon, fix.lat))
+        val marker = Feature.fromGeometry(Point.fromLngLat(fix.lon, fix.lat)).apply {
+            addStringProperty("icon", if (gps.bearing != null) "pos-arrow" else "pos-dot")
+            addNumberProperty("bearing", gps.bearing ?: 0f)
+        }
+        style?.getSourceAs<GeoJsonSource>("position")?.setGeoJson(marker)
     }
 
     Box(modifier = modifier) {
@@ -303,3 +387,44 @@ private fun WalkMap(points: List<LatLon>, gps: GpsState, modifier: Modifier = Mo
         }
     }
 }
+
+// Position marker icons, drawn in code: a white dot with a black ring, and
+// the same dot with a heading wedge for when a bearing is known.
+
+private fun positionDotBitmap(density: Float): Bitmap {
+    val size = (24 * density).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    drawPositionDot(android.graphics.Canvas(bitmap), size / 2f, density)
+    return bitmap
+}
+
+private fun positionArrowBitmap(density: Float): Bitmap {
+    val size = (36 * density).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bitmap)
+    val center = size / 2f
+    // Wedge pointing up (north before rotation), white-edged to stay
+    // readable on top of the black route line
+    val wedge = android.graphics.Path().apply {
+        moveTo(center, center - 16 * density)
+        lineTo(center - 6 * density, center - 6 * density)
+        lineTo(center + 6 * density, center - 6 * density)
+        close()
+    }
+    canvas.drawPath(wedge, paint(android.graphics.Paint.Style.STROKE, android.graphics.Color.WHITE, 3 * density))
+    canvas.drawPath(wedge, paint(android.graphics.Paint.Style.FILL, android.graphics.Color.BLACK))
+    drawPositionDot(canvas, center, density)
+    return bitmap
+}
+
+private fun drawPositionDot(canvas: android.graphics.Canvas, center: Float, density: Float) {
+    canvas.drawCircle(center, center, 6 * density, paint(android.graphics.Paint.Style.FILL, android.graphics.Color.WHITE))
+    canvas.drawCircle(center, center, 6 * density, paint(android.graphics.Paint.Style.STROKE, android.graphics.Color.BLACK, 3 * density))
+}
+
+private fun paint(style: Paint.Style, color: Int, strokeWidth: Float = 0f) =
+    Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        this.style = style
+        this.color = color
+        this.strokeWidth = strokeWidth
+    }
