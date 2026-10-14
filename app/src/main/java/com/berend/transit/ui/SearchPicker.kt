@@ -23,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.mudita.mmd.components.search_bar.SearchBarDefaultsMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
@@ -72,7 +71,7 @@ fun <T> SearchPicker(
             },
         )
 
-        LazyColumnMMD(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
+        MonoLazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
             items(entries.size) { index ->
                 val entry = entries[index]
                 Row(verticalAlignment = Alignment.CenterVertically) {

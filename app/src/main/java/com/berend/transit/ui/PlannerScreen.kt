@@ -38,12 +38,12 @@ import androidx.compose.ui.unit.sp
 import com.berend.transit.TransitViewModel
 import com.berend.transit.api.GeoMatch
 import com.berend.transit.api.Itinerary
+import com.berend.transit.api.PlanLeg
 import com.berend.transit.api.asClock
 import com.berend.transit.api.asPlanLabel
 import com.berend.transit.api.toPlanTime
 import com.mudita.mmd.components.buttons.OutlinedButtonMMD
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.mudita.mmd.components.text.TextMMD
 
 private enum class PickTarget { From, To }
@@ -53,10 +53,17 @@ fun PlannerScreen(viewModel: TransitViewModel) {
     var picking by remember { mutableStateOf<PickTarget?>(null) }
     var pickingTime by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<Itinerary?>(null) }
+    var walking by remember { mutableStateOf<PlanLeg?>(null) }
+
+    val walk = walking
+    if (walk != null) {
+        WalkScreen(leg = walk, onBack = { walking = null })
+        return
+    }
 
     val detail = selected
     if (detail != null) {
-        TripDetailScreen(itinerary = detail, onBack = { selected = null })
+        TripDetailScreen(itinerary = detail, onBack = { selected = null }, onWalk = { walking = it })
         return
     }
 
@@ -183,7 +190,7 @@ private fun PlannerContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        LazyColumnMMD(contentPadding = PaddingValues(vertical = 8.dp), modifier = Modifier.weight(1f)) {
+        MonoLazyColumn(contentPadding = PaddingValues(vertical = 8.dp), modifier = Modifier.weight(1f)) {
             items(viewModel.trips.size) { index ->
                 val itinerary = viewModel.trips[index]
                 ItineraryRow(itinerary, onClick = { onSelectTrip(itinerary) })

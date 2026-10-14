@@ -2,6 +2,7 @@ package com.berend.transit.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,16 +33,13 @@ import com.berend.transit.api.PlanStop
 import com.berend.transit.api.asClock
 import com.berend.transit.api.toPlanTime
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
-import com.mudita.mmd.components.lazy.LazyColumnMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
 import java.time.Duration
 
-// One fixed-height list item per text row. LazyColumnMMD ignores scroll
-// gestures and hides its scrollbar unless item count times the FIRST visible
-// item's height exceeds the viewport, so variable item heights make it
-// under-estimate the content and swallow swipes on longer trips.
-private val ROW_HEIGHT = 52.dp
+// One fixed-height list item per text row: uniform heights keep the
+// scrollbar's content estimate exact.
+internal val ROW_HEIGHT = 52.dp
 
 internal sealed interface LegRow
 internal data class HeaderRow(val leg: PlanLeg) : LegRow
@@ -50,7 +49,7 @@ internal data class StopRow(
     val stop: PlanStop?,
     val dividerAfter: Boolean,
 ) : LegRow
-internal data class WalkRow(val minutes: Long) : LegRow
+internal data class WalkRow(val minutes: Long, val leg: PlanLeg) : LegRow
 
 internal fun legRows(itinerary: Itinerary): List<LegRow> {
     val lastTransit = itinerary.legs.lastOrNull { it.isTransit }
@@ -61,7 +60,7 @@ internal fun legRows(itinerary: Itinerary): List<LegRow> {
                 add(StopRow(leg.startTime, leg.scheduledStartTime, leg.from, dividerAfter = false))
                 add(StopRow(leg.endTime, leg.scheduledEndTime, leg.to, dividerAfter = leg !== lastTransit))
             } else if (leg.duration >= 60) {
-                add(WalkRow(leg.duration / 60))
+                add(WalkRow(leg.duration / 60, leg))
             }
         }
     }
@@ -69,7 +68,7 @@ internal fun legRows(itinerary: Itinerary): List<LegRow> {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TripDetailScreen(itinerary: Itinerary, onBack: () -> Unit) {
+fun TripDetailScreen(itinerary: Itinerary, onBack: () -> Unit, onWalk: (PlanLeg) -> Unit) {
     BackHandler(onBack = onBack)
 
     val rows = legRows(itinerary)
@@ -93,7 +92,7 @@ fun TripDetailScreen(itinerary: Itinerary, onBack: () -> Unit) {
             },
         )
 
-        LazyColumnMMD(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
+        MonoLazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
             item {
                 val minutes = itinerary.duration / 60
                 val transfers = when (itinerary.transfers) {
@@ -121,7 +120,22 @@ fun TripDetailScreen(itinerary: Itinerary, onBack: () -> Unit) {
                         StopDetail(row.time, row.scheduledTime, row.stop)
                     }
                     is WalkRow -> DetailRow {
-                        TextMMD("Walk ${row.minutes} min", fontSize = 14.sp)
+                        // Navigable only when the plan response carried geometry.
+                        val navigable = row.leg.steps.isNotEmpty() || !row.leg.legGeometry?.points.isNullOrEmpty()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable(enabled = navigable) { onWalk(row.leg) },
+                        ) {
+                            TextMMD("Walk ${row.minutes} min", fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            if (navigable) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ChevronRight,
+                                    contentDescription = "Walk directions",
+                                )
+                            }
+                        }
                     }
                 }
             }

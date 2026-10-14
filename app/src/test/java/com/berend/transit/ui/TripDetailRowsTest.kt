@@ -30,6 +30,6 @@ class TripDetailRowsTest {
     @Test
     fun `walks under a minute are dropped`() {
         val rows = legRows(Itinerary(legs = listOf(walk(59), transit("1"), walk(60))))
-        assertEquals(listOf(WalkRow(1)), rows.filterIsInstance<WalkRow>())
+        assertEquals(listOf(1L), rows.filterIsInstance<WalkRow>().map { it.minutes })
     }
 }

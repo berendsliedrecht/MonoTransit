@@ -11,6 +11,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.pow
 
 /**
  * Transitous (https://transitous.org): free community-run MOTIS routing over aggregated GTFS.
@@ -88,8 +89,11 @@ data class PlanLeg(
     val scheduledStartTime: String? = null,
     val scheduledEndTime: String? = null,
     val duration: Long = 0, // seconds
+    val distance: Double? = null, // meters, walk legs only
     val from: PlanStop? = null,
     val to: PlanStop? = null,
+    val legGeometry: EncodedPolyline? = null,
+    val steps: List<WalkStep> = emptyList(), // walk legs only
 ) {
     val isTransit: Boolean get() = mode != "WALK"
 
@@ -109,6 +113,50 @@ data class PlanStop(
     val track: String? = null,
     val cancelled: Boolean = false,
 )
+
+data class WalkStep(
+    val distance: Double = 0.0, // meters
+    val streetName: String? = null,
+    val polyline: EncodedPolyline? = null,
+)
+
+data class LatLon(val lat: Double, val lon: Double)
+
+data class EncodedPolyline(
+    val points: String? = null,
+    val precision: Int = 6, // decimal places; Transitous v3 sends 6
+) {
+    /** Google polyline algorithm with a variable precision factor. */
+    fun decode(): List<LatLon> {
+        val encoded = points ?: return emptyList()
+        val factor = 10.0.pow(precision)
+        val out = mutableListOf<LatLon>()
+        var index = 0
+        var lat = 0L
+        var lon = 0L
+        fun next(): Long {
+            var result = 0L
+            var shift = 0
+            var b: Int
+            do {
+                b = encoded[index++].code - 63
+                result = result or ((b and 0x1f).toLong() shl shift)
+                shift += 5
+            } while (b >= 0x20)
+            return if (result and 1L != 0L) (result shr 1).inv() else result shr 1
+        }
+        try {
+            while (index < encoded.length) {
+                lat += next()
+                lon += next()
+                out.add(LatLon(lat / factor, lon / factor))
+            }
+        } catch (_: IndexOutOfBoundsException) {
+            // Truncated polyline: keep the points decoded so far.
+        }
+        return out
+    }
+}
 
 private val CLOCK: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 

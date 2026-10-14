@@ -75,6 +75,9 @@ dependencies {
     // Mudita Mindful Design Framework
     implementation("com.mudita:MMD:1.0.0")
 
+    // Walk map: open source GL map renderer, monochrome style over OpenFreeMap tiles
+    implementation("org.maplibre.gl:android-sdk:11.11.0")
+
     testImplementation("junit:junit:4.13.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
